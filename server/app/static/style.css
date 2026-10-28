@@ -1,0 +1,420 @@
+/* ---- Grok Bot — dark full-screen mobile shell (0.4.0) ----
+ * Dark charcoal + amber across the whole page. Full-bleed: no
+ * centred narrow column, native-size type, tap targets >=44px,
+ * no horizontal overflow at 360px. 0.4.0 removes the bottom nav
+ * entirely — navigation is the top bar + back arrow + Create
+ * dialog (video pattern). The Virtual Office deck keeps its
+ * existing dark theme below; its operational panels are hidden
+ * from the main view (see .deck-ops and #computers-panel) and
+ * live under Pengaturan > Lanjutan. */
+html,body{max-width:100%}
+body{font-family:system-ui,sans-serif;margin:0;min-height:100dvh;display:flex;flex-direction:column;background:#16181d;color:#e8e6e3;font-size:17px;line-height:1.5;overflow-x:hidden}
+.tagline{font-weight:600}
+.honest{background:rgba(245,166,35,.12);border:1px solid #f5a623;color:#f5c86a;padding:10px;border-radius:10px}
+.panel{background:#23262e;border:1px solid #2e323c;border-radius:12px;padding:14px;margin:8px 0}
+.panel h2{margin:0 0 8px;font-size:1.2rem}
+.panel h3{font-size:1rem;margin:14px 0 6px}
+.hidden{display:none !important}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* Connection status (Goal 2): one honest line under the list
+ * top bar and in Pengaturan. Green = the /api/health probe
+ * answered; amber = the probe failed (local data only); grey =
+ * not probed yet. Never claims a state the probe did not find. */
+.conn-status{font-size:.85rem;color:#9a958c;margin:2px 2px 0}
+.conn-status.online{color:#46a758}
+.conn-status.offline{color:#f5a623}
+.conn-status.unknown{color:#9a958c}
+
+/* Views: one visible at a time. No bottom nav in 0.4.0, so no
+ * bottom padding allowance for one. */
+#views{flex:1;padding:12px 12px calc(12px + env(safe-area-inset-bottom))}
+.view{display:none}
+.view.active{display:block}
+.view-sub{color:#9a958c;margin:4px 0 12px}
+.app-version{color:#9a958c;font-size:.9em}
+
+/* ---- 0.6.0 drawer top bar ----
+ * The old list top bar moved into the drawer header: left, the
+ * owner avatar circle with "S"; right, the dark capsule pill
+ * with bell / search / +. The drawer itself lives at the end
+ * of this file (0.6.0 drawer section). */
+.owner-avatar{width:52px;height:52px;border-radius:50%;background:#2a2e38;color:#fff;border:1px solid #3a3e48;font-size:1.4rem;font-weight:800;flex-shrink:0;padding:0;min-height:52px}
+.pill-actions{display:flex;align-items:center;gap:4px;background:#23262e;border:1px solid #2e323c;border-radius:999px;padding:4px 8px}
+.pill-actions button{background:none;border:none;color:#e8e6e3;min-height:48px;min-width:48px;font-size:1.25rem;padding:0 6px;position:relative}
+.notif-badge{position:absolute;top:2px;right:0;min-width:18px;height:18px;border-radius:999px;background:#e5484d;color:#fff;font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.section-head{margin:14px 2px 4px;font-size:1.15rem}
+.empty-state{color:#9a958c;margin:18px 2px}
+.notif-panel{background:#23262e;border:1px solid #2e323c;border-radius:12px;padding:12px;margin:4px 0 12px}
+.notif-panel h2{margin:0 0 4px;font-size:1.1rem}
+#notif-list{list-style:none;padding:0;margin:8px 0}
+.notif-item{display:flex;gap:10px;align-items:flex-start;border-top:1px solid #2e323c;padding:10px 0}
+.notif-item:first-child{border-top:none}
+.notif-body{flex:1;min-width:0;overflow-wrap:anywhere}
+.notif-detail{color:#9a958c;font-size:.9em;margin-top:2px}
+.notif-meta{color:#9a958c;font-size:.85em;margin-top:2px}
+.notif-actions{display:flex;flex-direction:column;gap:6px}
+.notif-actions button{min-height:44px;padding:6px 10px;font-size:.9rem}
+.list-search{margin:4px 0 8px}
+.list-search input{width:100%}
+
+/* ---- Bot list rows (chat-list style) ---- */
+.bot-list{list-style:none;padding:0;margin:8px 0;display:grid;gap:2px}
+.bot-row{display:flex;gap:12px;align-items:center;padding:10px 4px;cursor:pointer;border-radius:12px;min-height:64px}
+.bot-row:active{background:#23262e}
+.bot-avatar{width:52px;height:52px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15em;flex-shrink:0;position:relative}
+.bot-dot{position:absolute;right:0;bottom:2px;width:12px;height:12px;border-radius:50%;background:#f5a623;border:2px solid #16181d}
+.bot-body{flex:1;min-width:0}
+.bot-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.bot-head strong{font-size:1.05rem}
+.bot-time{color:#9a958c;font-size:.85em;flex-shrink:0}
+.bot-preview{color:#9a958c;font-size:.95em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bot-unread{width:10px;height:10px;border-radius:50%;background:#f5a623;flex-shrink:0}
+
+/* ---- Create dialog: floating centred card, ~88% wide ----
+ * NOT a bottom sheet. Dismiss by tapping the scrim outside
+ * the card; no X button. */
+.scrim{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px}
+.scrim.hidden{display:none}
+.create-dialog{width:88%;max-width:480px;background:#55565c;border-radius:8px;padding:22px 18px 18px;color:#fff}
+.create-dialog h2{margin:0 0 16px;font-size:1.4rem}
+.create-row{display:flex;justify-content:space-between;gap:8px}
+.create-row button{background:none;border:none;color:#f5a623;font-weight:800;letter-spacing:.06em;padding:12px 4px;min-height:48px;font-size:.95rem}
+.create-dialog input{width:100%;background:#2a2e38}
+.create-dialog .note{color:#d8d5d0}
+.group-members{display:grid;gap:4px;margin:10px 0}
+.group-member{display:flex;align-items:center;gap:8px;font-weight:600;padding:6px 0}
+.group-member input{width:auto;min-height:24px;margin:0}
+
+/* ---- Chat top bar: back arrow, centre pill, ••• menu ---- */
+.chat-topbar{display:flex;align-items:center;gap:10px;padding:calc(6px + env(safe-area-inset-top)) 2px 10px;position:relative}
+.chat-topbar>button{background:none;border:none;color:#fff;font-size:1.4rem;min-height:48px;min-width:48px;padding:0 6px}
+.chat-pill{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#23262e;border:1px solid #2e323c;border-radius:999px;padding:8px 14px;min-height:48px;min-width:0}
+.chat-avatar{width:32px;height:32px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.95em;flex-shrink:0}
+#chat-pill-name{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stop-pill{background:#f26d6d !important;color:#16181d !important;font-weight:800;font-size:1rem;border-radius:999px;padding:8px 16px;min-height:48px;border:none;white-space:nowrap}
+.chat-topbar .stop-pill,.pill-actions .stop-pill{font-size:1rem}
+.chat-menu{position:absolute;top:calc(100% - 4px);right:2px;z-index:60;background:#23262e;border:1px solid #3a3e48;border-radius:12px;padding:6px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.chat-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:#e8e6e3;padding:12px;min-height:48px;font-size:1rem}
+.date-sep{text-align:center;color:#6e6e6e;font-size:.9em;margin:6px 0 12px}
+
+/* ---- Onboarding card ---- */
+.onboarding{background:#23262e;border:1px solid #2e323c;border-radius:16px;padding:16px;margin:4px 0 12px}
+.onboarding-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px}
+.onboarding-head strong{font-size:1.05rem}
+.onboarding-head button{background:none;border:none;color:#9a958c;font-size:1.4rem;min-height:44px;min-width:44px;padding:0}
+.onboarding-options{display:grid;gap:10px}
+.onboarding-option{display:flex;align-items:center;gap:10px;background:#14161a;border:1px solid #2e323c;border-radius:12px;padding:12px;min-height:52px;text-align:left;font-size:1rem;color:#e8e6e3}
+.opt-letter{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;background:#2a2e38;font-weight:800;flex-shrink:0}
+#onboarding-rename{margin-top:10px;background:none;border:1px solid #f5a623;color:#f5a623;border-radius:999px;padding:8px 14px;min-height:44px}
+
+/* ---- Composer: [+] circle, capsule input, voice/send circle ---- */
+#chat-form{display:flex;gap:8px;align-items:flex-end;margin-top:10px}
+#composer-plus{width:52px;height:52px;border-radius:50%;background:#2a2e38;color:#fff;border:1px solid #3a3e48;font-size:1.5rem;flex-shrink:0;padding:0;min-height:52px}
+.composer-field{flex:1;display:flex;align-items:center;gap:4px;background:#2a2e38;border:1px solid #3a3e48;border-radius:999px;padding:4px 4px 4px 14px;min-height:52px}
+#message-input{flex:1;min-width:0;background:none;border:none;margin:0;padding:8px 0;min-height:40px}
+#message-input:focus{outline:none}
+#voice-ptt-btn{width:44px;height:44px;border-radius:50%;background:#fff;color:#111;border:none;font-size:1.2rem;flex-shrink:0;padding:0;min-height:44px}
+#composer-send{width:44px;height:44px;border-radius:50%;background:#fff;color:#111;border:none;font-size:1.3rem;font-weight:800;flex-shrink:0;padding:0;min-height:44px}
+.action-sheet{background:#23262e;border:1px solid #2e323c;border-radius:12px;padding:6px;margin-top:8px}
+.action-sheet button{display:block;width:100%;text-align:left;background:none;border:none;color:#e8e6e3;padding:12px;min-height:48px;font-size:1rem}
+
+/* Forms: native-size, dark, big tap targets. */
+label{display:block;margin:8px 0 2px;font-weight:600}
+label input,label select,label textarea{display:block;width:100%;margin-top:4px}
+input,select,button,textarea{margin:4px 0;padding:10px 12px;min-height:48px;font-size:1rem;background:#2a2e38;color:#e8e6e3;border:1px solid #3a3e48;border-radius:10px;box-sizing:border-box}
+button{cursor:pointer;font-weight:600}
+button:disabled{opacity:.55}
+#memory-form{display:flex;flex-wrap:wrap;gap:8px}
+#memory-input{flex:1;min-width:140px}
+#voice-ptt{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;font-size:.9em;color:#9a958c}
+#memory-panel{margin-top:12px}
+
+/* Chat layout: single column on phones, sidebar on wide screens. */
+main{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:800px){main{grid-template-columns:300px 1fr}}
+#messages{min-height:200px;border:1px solid #2e323c;background:#1c1f26;border-radius:10px;padding:8px}
+/* Chat messages: bot messages have NO bubble — transparent
+ * background, white text on the dark page, small avatar at
+ * left + sender-name label above the first line. User messages
+ * are a dark-grey rounded bubble, right-aligned. */
+.msg{margin:8px 0;padding:10px;border-radius:10px;overflow-wrap:anywhere;white-space:pre-wrap}
+.msg.user{background:#2a2e38;margin-left:24px}
+.msg.assistant{background:transparent;border:none;padding:10px 0;display:flex;gap:10px;align-items:flex-start}
+.msg-avatar{width:32px;height:32px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85em;flex-shrink:0}
+.msg-body{flex:1;min-width:0}
+.msg-label{display:block;color:#f5a623;font-weight:700;font-size:.9em;margin-bottom:2px}
+.msg-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.system{background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4)}
+.presence{font-size:.9em;color:#9a958c}.typing{color:#9a958c;font-style:italic}
+.turn{font-size:.85em;color:#46a758}.handoff{font-size:.85em;color:#9a958c}
+.done{font-size:.85em;color:#e8e6e3}.stopped{background:rgba(229,72,77,.12);padding:10px;border:1px solid #e5484d;border-radius:10px}
+.status{font-weight:600;color:#f5a623}
+.note{color:#9a958c;font-size:.9em}
+.meeting{border:1px solid #3a3e48;background:#1c1f26;border-radius:10px;padding:10px;margin:10px 0}
+
+/* Character cards: big avatar + body, used by the Chat strip
+ * (horizontal scroll) and the Bot directory (large stacked cards). */
+.char-card{display:flex;gap:12px;align-items:flex-start;background:#1c1f26;border:1px solid #2e323c;border-radius:14px;padding:14px;cursor:pointer}
+.char-avatar{width:52px;height:52px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15em;flex-shrink:0;border:3px solid #333}
+.char-body{flex:1;min-width:0}
+.char-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.char-head strong{font-size:1.05rem}
+.char-status{color:#46a758;font-weight:700;font-size:.9em}
+.char-meta{color:#9a958c;font-size:.9em;margin:2px 0 4px}
+#character-list{display:flex;overflow-x:auto;gap:8px;list-style:none;padding:0;margin:8px 0}
+#character-list .char-card{flex:0 0 240px}
+#room-list{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:8px 0}
+@media(min-width:800px){#character-list{display:block}#character-list .char-card{flex:none;margin:0 0 8px}}
+#bot-directory{display:grid;gap:12px;list-style:none;padding:0;margin:8px 0}
+@media(min-width:700px){#bot-directory{grid-template-columns:1fr 1fr}}
+
+/* Skills chips + email line on bot cards — reuse the existing
+ * amber/dark tag language (amber fill, dark text, same as
+ * .vo-tag.run); no new colour scheme. Inside #deck the chips
+ * sit on the dark panel; outside it they sit on the dark shell
+ * with an amber border. Long addresses wrap, never clip. */
+.skill-chips{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+.skill-chip{display:inline-block;padding:2px 8px;font-size:.8em;font-weight:700;letter-spacing:.05em;background:#f5a623;color:#111;border:1px solid #f5a623;border-radius:999px}
+.skill-empty{font-size:.85em;color:#9a958c;font-style:italic}
+.mail-line{font-size:.85em;color:#9a958c;overflow-wrap:anywhere}
+.char-card .mail-line{margin:2px 0 4px}
+#deck .skill-chip{background:#f5a623;color:#111;border-color:#f5a623}
+#deck .skill-empty{color:#9a958c}
+#deck .mail-line{color:#9a958c}
+#deck .vo-room .skill-chips{justify-content:center;margin:4px 0 0}
+#deck .vo-room .skill-chip{font-size:.65em;padding:1px 5px}
+#deck .vo-room .mail-line{font-size:.7em;margin-top:2px}
+
+/* Devices panes (shared by the room view and Lanjutan). */
+.devices-panes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.devices-panes{grid-template-columns:1fr}}
+.devices-panes img{width:100%;border:1px solid #2e323c;background:#000}
+.devices-panes figcaption{font-weight:600;margin-bottom:4px}
+#devices-feed li,#devices-bridge-log li{margin:4px 0}
+#advanced #devices{margin:16px 0 0;background:#1c1f26}
+
+/* Ruangan tab: two big entry buttons, then the room scene. */
+.room-controls{display:flex;gap:8px;margin:4px 0 12px}
+.room-controls button{flex:1;min-height:52px;font-size:1.05rem;border-radius:12px}
+.room-controls #deck-btn{background:#f5a623;color:#111;border-color:#f5a623}
+.room-controls #deck-auto-btn{background:#1c1f26;color:#f5a623;border:1px solid #f5a623}
+
+/* ---- Virtual Office deck theme (dark industrial + amber) ----
+ * Avatars are CSS circles with initials over one original
+ * generated room illustration (room.jpg — cozy wooden office,
+ * no people, no text); agents are live overlays, never baked
+ * into the artwork. The deck is full-bleed inside the Ruangan
+ * view. Operational panels (computer registry, Kanban, plans,
+ * costs, health, ages) stay in the DOM and keep working, but
+ * are hidden from the main view — they live under Pengaturan >
+ * Lanjutan instead. */
+#deck{background:#14171b;color:#e8e6e3;border-color:#333;margin:0 -12px;border-radius:0;border-left:none;border-right:none;scroll-margin-top:70px}
+#deck .vo-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border:1px solid #333;background:#1c1f24;padding:12px}
+#deck .vo-title{color:#f5a623;letter-spacing:.18em;margin:0;font-size:1.4em}
+#deck .vo-sub{color:#9a958c;letter-spacing:.22em;font-size:.8em;margin:4px 0 0}
+#deck .vo-live{display:inline-flex;align-items:center;gap:6px;color:#ff6b6b;font-weight:700;letter-spacing:.15em;white-space:nowrap}
+#deck .vo-dot{width:10px;height:10px;border-radius:50%;background:#e5484d;box-shadow:0 0 8px #e5484d}
+.vo-updated{color:#f5a623;font-size:.85em}
+#deck .vo-updated{color:#f5a623;font-size:.85em}
+.vo-controls button{background:#f5a623;color:#111;border:1px solid #f5a623;font-weight:700}
+#deck .vo-controls button{background:#f5a623;color:#111;border:1px solid #f5a623;font-weight:700}
+.vo-note{color:#9a958c;font-size:.9em}
+#deck .vo-note{color:#9a958c;font-size:.9em}
+#deck .vo-layout{display:grid;grid-template-columns:1fr;gap:12px}
+#deck .vo-sidebar{display:none}
+#deck .vo-panel{border:1px solid #333;background:#1c1f24;padding:10px;margin:0 0 12px}
+#deck .vo-panel h3{color:#9a958c;letter-spacing:.2em;font-size:.85em;margin:0 0 8px}
+#deck .vo-panel ul{padding-left:18px;margin:8px 0}
+#deck .vo-hex{width:52px;height:52px;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);margin:0 auto 8px}
+#deck .vo-room-head{display:flex;justify-content:space-between;align-items:center;background:#000;border:1px solid #f5a623;padding:8px 12px}
+#deck .vo-room-head h3{margin:0;letter-spacing:.15em;font-size:.9em}
+#deck .vo-room{position:relative;aspect-ratio:16/9;min-height:280px;overflow:hidden;padding:0;background:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.45)),url(/static/room.jpg) center/cover;border:1px solid #f5a623;border-top:none}
+#deck .vo-agent{background:#1c1f24;border:1px solid #333;padding:10px;text-align:center}
+#deck .vo-agent.dim{opacity:.35}
+#deck .vo-avatar{width:56px;height:56px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1em;margin:0 auto 6px;border:3px solid #333}
+#deck .vo-agent-name{font-weight:700}
+#deck .vo-agent-title{color:#9a958c;font-size:.85em}
+/* Room scene chips: agents overlaid live on the room photo, one
+ * per desk spot. Positions are fixed percentages of the scene;
+ * the render assigns pos-(index % 6), so a 7th bot would cycle
+ * rather than break the layout. Filter dimming still applies. */
+#deck .vo-room .vo-agent{position:absolute;transform:translate(-50%,-50%);width:108px;background:rgba(28,31,36,.92);border:1px solid #f5a623;padding:8px 6px;text-align:center}
+#deck .vo-room .vo-agent.dim{opacity:.35}
+#deck .vo-room .vo-agent.pos-0{left:12%;top:30%}
+#deck .vo-room .vo-agent.pos-1{left:44%;top:24%}
+#deck .vo-room .vo-agent.pos-2{left:76%;top:30%}
+#deck .vo-room .vo-agent.pos-3{left:18%;top:66%}
+#deck .vo-room .vo-agent.pos-4{left:50%;top:70%}
+#deck .vo-room .vo-agent.pos-5{left:82%;top:66%}
+#deck .vo-room .vo-avatar{width:48px;height:48px;border-radius:50%;background:#f5a623;color:#111;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1em;margin:0 auto 4px;border:3px solid #333}
+#deck .vo-room .vo-agent-name{font-weight:700;font-size:.85em}
+#deck .vo-room .vo-agent-title{color:#9a958c;font-size:.75em}
+@media(max-width:700px){#deck .vo-room{aspect-ratio:4/3;min-height:220px}#deck .vo-room .vo-agent{width:84px;padding:6px 4px}#deck .vo-room .vo-avatar{width:36px;height:36px;font-size:.85em}#deck .vo-room .vo-agent-name{font-size:.75em}#deck .vo-room .vo-tag{font-size:.7em}}
+#deck .vo-tag{display:inline-block;margin-top:6px;padding:2px 8px;font-size:.8em;font-weight:700;letter-spacing:.08em}
+#deck .vo-tag.run{background:#f5a623;color:#111}
+#deck .vo-tag.queue{background:#4c8dff;color:#fff}
+#deck .vo-tag.done{background:#46a758;color:#fff}
+#deck .vo-tag.fail{background:#e5484d;color:#fff}
+#deck .vo-tag.none{background:#555;color:#e8e6e3}
+#deck .vo-filters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#deck .vo-filters button{background:#1c1f24;color:#e8e6e3;border:1px solid #555}
+#deck .vo-filters button.active{background:#f5a623;color:#111;border-color:#f5a623}
+.vo-h{color:#f5a623;letter-spacing:.12em;font-size:.95em}
+#deck .vo-h{color:#f5a623;letter-spacing:.12em;font-size:.95em}
+/* Kanban board (wraps, never clips) + duty tag. */
+#deck-kanban{display:flex;flex-wrap:wrap;gap:12px}
+#deck-kanban .kanban-col{flex:1;min-width:160px;border:1px solid #333;background:#1c1f24;padding:10px}
+#deck-kanban .kanban-col h4{color:#9a958c;letter-spacing:.12em;font-size:.85em;margin:0 0 8px}
+#deck-kanban .kanban-col ul{padding-left:18px;margin:0}
+#deck-kanban .kanban-verdict{font-size:.75em;color:#f5a623}
+.duty-tag{display:inline-block;padding:1px 8px;font-size:.75em;font-weight:700;background:#1c1f24;color:#f5a623;border:1px solid #f5a623;border-radius:999px}
+#deck .duty-tag{display:inline-block;padding:1px 8px;font-size:.75em;font-weight:700;background:#1c1f24;color:#f5a623;border:1px solid #f5a623;border-radius:999px}
+#deck ul{padding-left:18px}
+#deck .devices-panes img{background:#000}
+#deck .status{color:#f5a623}
+/* Backend panels hidden from the main view: the computer
+ * registry, Kanban, plans, costs, health and ages stay in the
+ * DOM (tests + JS keep using them) but are not shown. Their
+ * controls live under Pengaturan > Lanjutan. */
+#deck #computers-panel{display:none}
+.deck-ops{display:none}
+/* Readability rule (owner, 2026-10-24): no content may be cut off
+   horizontally the way the old app's tables were — a wide table
+   or long string must scroll sideways on the phone or wrap,
+   never disappear past the screen edge. */
+#messages,.panel,#deck,#devices{overflow-wrap:anywhere}
+table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+td,th{overflow-wrap:anywhere}
+img{max-width:100%;height:auto}
+/* Computers as the core of the deck + always-approve (kept in
+ * the DOM; the registry panel is hidden in the main view, the
+ * approval picker lives in Pengaturan > Lanjutan). */
+#deck .vo-computers{border:1px solid #f5a623;background:#14161a;padding:12px;margin:0 0 12px}
+#deck .vo-computers-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+#deck .vo-computers-head h3{margin:0;letter-spacing:.15em;font-size:.95em;color:#f5a623}
+#deck .vo-computers h4{color:#9a958c;letter-spacing:.12em;font-size:.85em;margin:12px 0 6px}
+#deck .computer-primary{border:1px solid #333;background:#1c1f24;padding:10px;margin:8px 0}
+#deck .computer-devices{border:1px solid #333;background:#1c1f24;padding:10px;margin:8px 0}
+#deck #computers-list{margin:4px 0}
+#deck #computers-list button{margin-left:8px}
+.always-approve{border-top:1px solid #333;margin-top:12px;padding-top:10px}
+#deck .always-approve{border-top:1px solid #333;margin-top:12px;padding-top:10px}
+.always-approve label{font-weight:700}
+#deck .always-approve label{font-weight:700}
+/* ---- Live presence (0.5.0): typing indicator, streaming
+ * replies, working rows and room chips ----
+ * All of it is driven by real state (a reply in flight, a run
+ * with status "running" in the deck payload, a bot listed in the
+ * deck's operating map) — nothing here animates on its own.
+ * Amber on charcoal, same as the rest of the shell. */
+@keyframes typing-blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+@keyframes presence-pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.45)}50%{box-shadow:0 0 0 6px rgba(245,166,35,0)}}
+@keyframes presence-glow{0%,100%{box-shadow:0 0 0 0 rgba(245,166,35,.35)}50%{box-shadow:0 0 16px 3px rgba(245,166,35,.45)}}
+/* Typing indicator: "Name mengetik" + three amber dots. */
+.typing-name{font-weight:700;color:#e8e6e3;font-style:normal}
+.typing-dots span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f5a623;margin-left:3px;animation:typing-blink 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+/* Streaming bubble: blinking caret at the live end of the text. */
+.msg.streaming .msg-text::after{content:"▍";color:#f5a623;animation:typing-blink 1s infinite}
+/* Bot list row while its bot works: pulsing amber ring on the
+ * avatar, pulsing dot + amber italic label in the preview line. */
+.bot-row.working .bot-avatar{animation:presence-pulse 1.6s ease-in-out infinite}
+.working-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f5a623;margin-right:6px;animation:typing-blink 1.2s infinite}
+.bot-preview-working{color:#f5a623;font-style:italic}
+/* Room chip while its agent's run is "running": glowing border
+ * + pulsing avatar ring. Any other run status stays still. */
+#deck .vo-agent.working{border-color:#f5a623;animation:presence-glow 1.6s ease-in-out infinite}
+#deck .vo-agent.working .vo-avatar{animation:presence-pulse 1.6s ease-in-out infinite}
+.vo-working-mark{color:#f5a623;font-weight:700}
+.always-approve-indicator{display:inline-block;background:#b00020;color:#fff;padding:2px 8px;font-weight:700;margin-left:8px}
+#deck .always-approve-indicator{display:inline-block;background:#b00020;color:#fff;padding:2px 8px;font-weight:700;margin-left:8px}
+
+/* ---- 0.6.0 drawer: the bot list beside the chat ----
+ * The chat IS the workspace (view-chat is the landing screen);
+ * the bot list slides in from the left as a drawer, ~80% wide
+ * (max 320px), full height. Visibility is the .open class on
+ * #drawer (transform + transition, so it slides); the scrim
+ * hides with the shared .hidden rule. Drawer rows reuse the
+ * existing .bot-list / .bot-row / .bot-avatar styles — only the
+ * top bar and the nav rows are new here. */
+.drawer-scrim{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6)}
+#drawer{position:fixed;top:0;left:0;bottom:0;z-index:71;width:80%;max-width:320px;background:#1c1f26;border-right:1px solid #2e323c;transform:translateX(-100%);transition:transform .25s ease;overflow-y:auto;padding:calc(6px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+#drawer.open{transform:translateX(0)}
+.drawer-topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 2px 10px}
+.drawer-divider{border:none;border-top:1px solid #2e323c;margin:12px 0}
+.drawer-nav{display:block;width:100%;text-align:left;background:none;border:none;color:#e8e6e3;padding:12px 4px;min-height:48px;font-size:1rem}
+/* Back to chat from Ruangan / Pengaturan: one plain row at the
+ * top of each view, same language as the chat top bar. */
+.sub-topbar{display:flex;align-items:center;gap:10px;padding:calc(6px + env(safe-area-inset-top)) 2px 10px}
+.sub-topbar button{background:none;border:none;color:#fff;font-size:1.1rem;font-weight:700;min-height:48px;padding:0 6px}
+/* ---- 0.6.0 living blobs (Builder B) ----
+ * Each bot gets ONE organic blob — an odd, non-circle shape in
+ * its own colour — derived deterministically from the bot id in
+ * app.js (blobStyleFor: hue = hash % 360, variant = hash % 5).
+ * No images, no library: pure CSS border-radius morph + a
+ * per-bot hue. The initials STAY inside the blob (the name cue
+ * at a glance, in every place, at every size); only the typing
+ * state hides them, swapping in three dots.
+ * The three shape variables (--blob-ra/rb/rc) are the morph
+ * stops: @keyframes blob-morph walks between them, so each
+ * variant wobbles through its OWN odd shapes. The var() calls
+ * inside the keyframes resolve per element — that is what
+ * keeps the five variants distinct while they animate.
+ * The selector list below beats the flat amber-circle avatar
+ * rules above (including the #deck ones) and the old
+ * presence-pulse avatar rules, so a blob never falls back to
+ * a plain circle. Sizes still come from the avatar classes
+ * (.bot-avatar 52px, .chat-avatar 32px, .msg-avatar 32px,
+ * .vo-avatar 56/48px) — only the shape/colour/animation
+ * move here. .bot-blob--lg makes the chat-pill blob the
+ * biggest one on screen (44px).
+ * States, all driven by real state (see syncBlobStates in
+ * app.js — no timer, no guess):
+ * - idle: slow 9s morph breath, no glow.
+ * - blob-working: faster 2.2s pulse + glow (reply in flight
+ *   via workingState, or a run with status "running" on a
+ *   room chip, baked by renderDeckBots).
+ * - blob-typing: three dots replace the initials while the
+ *   #typing indicator is visible for that bot. */
+.bot-blob{
+  --blob-hue:38;
+  --blob-ra:58% 42% 55% 45% / 48% 55% 45% 52%;
+  --blob-rb:45% 55% 48% 52% / 58% 42% 55% 45%;
+  --blob-rc:52% 48% 60% 40% / 45% 58% 42% 55%;
+  position:relative;
+}
+@keyframes blob-morph{
+  0%,100%{border-radius:var(--blob-ra);transform:scale(1) rotate(0deg)}
+  33%{border-radius:var(--blob-rb);transform:scale(1.04) rotate(1.5deg)}
+  66%{border-radius:var(--blob-rc);transform:scale(.98) rotate(-1.5deg)}
+}
+.bot-avatar.bot-blob,.chat-avatar.bot-blob,.msg-avatar.bot-blob,
+#deck .vo-avatar.bot-blob,
+.bot-row.working .bot-avatar.bot-blob,
+#deck .vo-agent.working .vo-avatar.bot-blob{
+  background:linear-gradient(135deg,hsl(var(--blob-hue) 85% 62%),hsl(var(--blob-hue) 78% 46%));
+  border-radius:var(--blob-ra);
+  animation:blob-morph 9s ease-in-out infinite;
+}
+/* Five shape variants — one per blobStyleFor variant. Each
+ * variant morphs through its own three odd shapes. */
+.bot-blob.blob-v0{--blob-ra:58% 42% 55% 45% / 48% 55% 45% 52%;--blob-rb:45% 55% 48% 52% / 58% 42% 55% 45%;--blob-rc:52% 48% 60% 40% / 45% 58% 42% 55%}
+.bot-blob.blob-v1{--blob-ra:62% 38% 45% 55% / 55% 45% 62% 38%;--blob-rb:40% 60% 55% 45% / 48% 60% 40% 52%;--blob-rc:55% 45% 38% 62% / 60% 38% 52% 48%}
+.bot-blob.blob-v2{--blob-ra:48% 52% 38% 62% / 62% 38% 55% 45%;--blob-rb:58% 42% 62% 38% / 42% 58% 48% 52%;--blob-rc:42% 58% 48% 52% / 55% 45% 60% 40%}
+.bot-blob.blob-v3{--blob-ra:55% 45% 62% 38% / 42% 58% 45% 55%;--blob-rb:48% 52% 40% 60% / 58% 42% 52% 48%;--blob-rc:60% 40% 52% 48% / 48% 55% 42% 58%}
+.bot-blob.blob-v4{--blob-ra:42% 58% 52% 48% / 55% 45% 40% 60%;--blob-rb:55% 45% 58% 42% / 48% 52% 60% 40%;--blob-rc:48% 52% 45% 55% / 60% 40% 52% 48%}
+/* Large blob: the chat-pill avatar, the most prominent one. */
+.bot-blob--lg{width:44px;height:44px;font-size:1.1em}
+/* Working: the same morph, faster, plus a glow in the bot's
+ * own hue. Idle blobs never glow. */
+.bot-blob.blob-working,.bot-row.working .bot-avatar.blob-working,#deck .vo-agent.working .vo-avatar.blob-working{
+  animation-duration:2.2s;
+  box-shadow:0 0 0 3px hsl(var(--blob-hue,38) 85% 60% / .35),0 0 18px 4px hsl(var(--blob-hue,38) 85% 60% / .45);
+}
+/* Typing: the initials hide and three dots blink in their
+ * place (same 1.2s blink as the #typing indicator dots).
+ * Dot size/offset are em-based, so they scale with the blob. */
+.bot-blob.blob-typing{color:transparent}
+.bot-blob.blob-typing::after{content:"";position:absolute;left:50%;top:50%;width:.32em;height:.32em;margin:-.16em 0 0 -.16em;border-radius:50%;background:#111;box-shadow:-.7em 0 0 #111,.7em 0 0 #111;animation:typing-blink 1.2s infinite}

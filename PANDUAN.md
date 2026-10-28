@@ -36,7 +36,12 @@ Tanpa ini, bot tidak bisa ngobrol sama AI.
 
 Langkah ini **opsional**. Kamu hanya butuh server kalau mau fitur bot, rooms, memory, MCP, dan Team Computer. Kalau cuma mau chat model langsung (BYO), Langkah 1 + 2 saja sudah cukup.
 
-1. Deploy server pendamping di PC (lihat README bagian "Access token server").
+1. Deploy server pendamping di PC — kodenya ada di folder [`server/`](server/README.md) di repo ini. Clone repo, masuk ke folder `server/`, lalu jalankan (lihat [server/README.md](server/README.md) untuk cara lengkap):
+   ```bash
+   git clone https://github.com/sam666-byte/nusantara-bots.git
+   cd nusantara-bots/server
+   GROKBOT_APP_HOST=0.0.0.0 GROKBOT_APP_OPEN_LAN=1 GROKBOT_APP_TOKEN_FILE=/path/to/token python3 -u app/server.py
+   ```
 2. Copy **access token server** — token yang kamu set waktu deploy (dari file token atau env var).
 3. Di aplikasi → pengaturan server → isi **Server URL** + **Access Token** → simpan.
 

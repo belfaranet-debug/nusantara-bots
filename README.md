@@ -90,7 +90,7 @@ Install APK ke HP, lalu buka **Settings → Pilih model** dan masukkan API key k
 - Node.js 18+ dan npm
 - JDK 17 dan Android SDK (untuk build APK)
 - HP Android (atau emulator) untuk menjalankan aplikasi
-- (Opsional) Server pendamping Nusantara Bots di PC kamu, untuk fitur bot, rooms, memory, MCP, dan Team Computer. Server ini komponen terpisah — aplikasi bisa tetap dipakai untuk chat model langsung (BYO) tanpa server.
+- (Opsional) Server pendamping Nusantara Bots di PC kamu, untuk fitur bot, rooms, memory, MCP, dan Team Computer. Server ini ada di folder [`server/`](server/README.md) di repo ini — aplikasi bisa tetap dipakai untuk chat model langsung (BYO) tanpa server.
 
 ### Build APK
 
@@ -120,19 +120,29 @@ Untuk build release, buat keystore sendiri dan konfigurasikan signing di `androi
 
 ### Access token server (kalau pakai server pendamping)
 
-Kalau server pendamping di-deploy supaya bisa diakses dari HP (bind LAN), server **wajib pakai access token**. Ini pengaman supaya hanya HP kamu yang bisa memakai server itu.
+Server pendamping ada di folder [`server/`](server/README.md) di repo ini (Python, tanpa dependensi pihak ketiga). Kalau server di-deploy supaya bisa diakses dari HP (bind LAN), server **wajib pakai access token**. Ini pengaman supaya hanya HP kamu yang bisa memakai server itu.
 
-**Di server** — set token lewat file atau env var saat menjalankan server:
+**Di server** — clone repo, masuk ke folder server, lalu set token lewat file atau env var saat menjalankan server:
 
 ```bash
+git clone https://github.com/sam666-byte/nusantara-bots.git
+cd nusantara-bots/server
+
+# Buat file token (satu baris, rahasia)
+echo -n "token-rahasia-kamu" > /path/to/token
+chmod 600 /path/to/token
+
+# Jalankan server (port 8780)
 GROKBOT_APP_HOST=0.0.0.0 GROKBOT_APP_OPEN_LAN=1 GROKBOT_APP_TOKEN_FILE=/path/to/token python3 -u app/server.py
 ```
 
-atau:
+atau pakai env var:
 
 ```bash
 GROKBOT_APP_HOST=0.0.0.0 GROKBOT_APP_OPEN_LAN=1 GROKBOT_APP_TOKEN=<token-rahasia> python3 -u app/server.py
 ```
+
+Lihat [server/README.md](server/README.md) untuk cara install lengkap.
 
 Token tersimpan di luar repo (file `chmod 600` atau env var) dan tidak pernah di-print di log — buka file-nya langsung untuk melihat isinya.
 
@@ -158,6 +168,7 @@ npx tsc --noEmit  # type check
 - **`src/api/client.ts`** — client server (bot, rooms, chat, memory, vault).
 - **`src/components/` & `src/screens/`** — UI aplikasi.
 - **`android/`** — kode native Android + Gradle (manual, bukan hasil generate Expo).
+- **`server/`** — server pendamping (Python stdlib, tanpa dependensi). Lihat [server/README.md](server/README.md).
 
 ## 🤝 Kontribusi
 

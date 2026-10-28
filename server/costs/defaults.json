@@ -1,0 +1,45 @@
+{
+  "_caps_note": "Daily cap per bot (USD/day, UTC day). EMPTY = no limit (unlimited) for all bots until the owner sets one. global_cap_usd=null means no global cap. Example: \"caps\": {\"yt-scriptwriter\": 2.00}. Or env: GROKBOT_DAILY_CAP_USD=5 (global) / GROKBOT_DAILY_CAP_USD_YT_SCRIPTWRITER=2 (per bot).",
+  "_comment": "Shipped defaults for the cost ledger (costs/). Edit the RUNTIME file data/cost_settings.json (or env vars) — never this file — to change prices or caps. Keys starting with \"_\" are notes and ignored.",
+  "_prices_note": "ESTIMASI: USD per 1M token (tarif publik per Okt 2026). Provider BYO bisa menagih berbeda — cost_usd di ledger adalah perkiraan, bukan tagihan. Model yang tidak ada di tabel: token tetap dicatat, biaya 0, flag price_known=false.",
+  "caps": {},
+  "global_cap_usd": null,
+  "prices": {
+    "gpt-4.1": {
+      "input_per_1m": 2.0,
+      "output_per_1m": 8.0
+    },
+    "gpt-4.1-mini": {
+      "input_per_1m": 0.4,
+      "output_per_1m": 1.6
+    },
+    "gpt-4.1-nano": {
+      "input_per_1m": 0.1,
+      "output_per_1m": 0.4
+    },
+    "gpt-4o": {
+      "input_per_1m": 2.5,
+      "output_per_1m": 10.0
+    },
+    "gpt-4o-mini": {
+      "input_per_1m": 0.15,
+      "output_per_1m": 0.6
+    },
+    "gpt-5": {
+      "input_per_1m": 1.25,
+      "output_per_1m": 10.0
+    },
+    "gpt-5-mini": {
+      "input_per_1m": 0.25,
+      "output_per_1m": 2.0
+    },
+    "gpt-5-nano": {
+      "input_per_1m": 0.05,
+      "output_per_1m": 0.4
+    },
+    "o4-mini": {
+      "input_per_1m": 1.1,
+      "output_per_1m": 4.4
+    }
+  }
+}

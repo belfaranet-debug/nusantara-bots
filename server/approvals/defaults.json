@@ -1,0 +1,11 @@
+{
+  "_comment": "Global approval level = full (auto all actions, behaves like always-approve ON). Other levels: ask (always ask), edits (auto file edits only), auto (auto safe actions), custom (per-rule per-bot/per-action). Change via the level picker in the deck (POST /api/approvals/settings) or by writing data/approval_settings.json — the runtime file overrides this file. Code default remains ask; this file enables full for this instance. alwaysAllow: commands always allowed at any level (read + web search).",
+  "actions": {},
+  "alwaysAllow": [
+    "read-file",
+    "web-search"
+  ],
+  "bots": {},
+  "engineCaps": {},
+  "mode": "full"
+}

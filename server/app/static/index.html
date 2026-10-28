@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Grok Bot</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div id="views">
+  <!-- ============ CHAT (0.6.0: the workspace itself is the landing screen) ============ -->
+  <div class="view active" id="view-chat">
+    <div class="chat-topbar">
+      <button id="drawer-open-btn" type="button" aria-label="Open bot list">☰</button>
+      <div id="chat-pill" class="chat-pill"><span id="chat-pill-avatar" class="chat-avatar bot-blob bot-blob--lg blob-v0" style="--blob-hue:38" data-bot-id="">?</span><span id="chat-pill-name">General chat</span></div>
+      <button id="chat-stop-pill" type="button" class="stop-pill hidden">■ Stop</button>
+      <button id="chat-menu-btn" type="button" aria-label="Chat options">•••</button>
+      <div id="chat-menu" class="chat-menu hidden">
+        <button id="chat-menu-memory" type="button">Save a memory</button>
+        <button id="chat-menu-stop" type="button">Stop</button>
+        <button id="chat-menu-settings" type="button">Bot settings</button>
+      </div>
+    </div>
+    <h2 id="room-title" class="visually-hidden">General chat</h2>
+    <div id="chat-date" class="date-sep"></div>
+    <div id="onboarding-card" class="onboarding hidden">
+      <div class="onboarding-head">
+        <strong>What do you want me on first?</strong>
+        <button id="onboarding-dismiss" type="button" aria-label="Dismiss">×</button>
+      </div>
+      <div class="onboarding-options">
+        <button type="button" class="onboarding-option" data-focus="day-to-day"><span class="opt-letter">A</span> Day-to-day work</button>
+        <button type="button" class="onboarding-option" data-focus="inbox"><span class="opt-letter">B</span> Inbox &amp; email</button>
+        <button type="button" class="onboarding-option" data-focus="research"><span class="opt-letter">C</span> Research &amp; writing</button>
+        <button type="button" class="onboarding-option" data-focus="everything"><span class="opt-letter">D</span> A bit of everything</button>
+      </div>
+      <p id="onboarding-error" class="status"></p>
+      <button id="onboarding-rename" type="button" class="hidden">Use a different name</button>
+    </div>
+    <div id="presence" class="presence"></div>
+    <div id="messages"></div>
+    <div id="typing" class="typing hidden" aria-live="polite"></div>
+    <div id="meeting-panel" class="meeting hidden">
+      <h2>Meeting room protocol — live UI, demo debate</h2>
+      <p><strong>Message budget:</strong> <span id="budget">–</span></p>
+      <p><strong>Turn order:</strong> <span id="turn-order">–</span></p>
+      <p><strong>Next speaker:</strong> <span id="next-speaker">–</span></p>
+      <h3>Decision / disputed points</h3>
+      <ul id="decision-list"></ul>
+      <label>Decision <input id="decision-text" placeholder="What was decided"></label>
+      <label>Still disputed <input id="disputed-text" placeholder="What is still disputed"></label>
+      <button id="record-decision">Record decision</button>
+      <p class="note">Balasan masih mock atau model BYO — keputusan yang dicatat masuk ke memori tim.</p>
+    </div>
+    <form id="chat-form">
+      <button type="button" id="composer-plus" aria-label="More actions">+</button>
+      <div class="composer-field">
+        <input id="message-input" placeholder="Message…" autocomplete="off">
+        <button type="button" id="voice-ptt-btn" aria-label="Hold to talk">🎙</button>
+        <button type="submit" id="composer-send" class="hidden" aria-label="Send">↑</button>
+      </div>
+      <select id="character-select" class="hidden" aria-label="Character"></select>
+      <button type="button" id="stop-btn" class="hidden">STOP</button>
+    </form>
+    <div id="composer-sheet" class="action-sheet hidden">
+      <button id="sheet-memory" type="button">Save a memory</button>
+      <button id="sheet-look" type="button">Look at devices</button>
+      <button id="sheet-new-group" type="button">New meeting room</button>
+    </div>
+    <div id="voice-ptt">
+      <span id="voice-ptt-status">Voice: idle</span>
+      <span id="voice-ptt-transcript"></span>
+    </div>
+    <div id="stopped-banner" class="stopped hidden"></div>
+    <div id="memory-panel" class="hidden">
+      <h3>Save to this character's memory</h3>
+      <form id="memory-form">
+        <input id="memory-input" placeholder="A lasting fact, decision, or correction…">
+        <button type="submit">Save memory</button>
+      </form>
+      <ul id="memory-list"></ul>
+    </div>
+    <!-- Legacy lists stay in the DOM (app.js renders + reads them)
+         but are not shown in the 0.4.0 views; the list screen is
+         the bot directory now. -->
+    <div class="hidden">
+      <ul id="character-list"></ul>
+      <ul id="room-list"></ul>
+      <label>New room name <input id="new-room-name" placeholder="e.g. Launch crew"></label>
+      <button id="new-room">Create chat room</button>
+      <button id="new-meeting-room">Create meeting room</button>
+      <ul id="bot-directory"></ul>
+    </div>
+  </div>
+
+  <!-- ============ RUANGAN ============ -->
+  <div class="view" id="view-rooms">
+    <div class="sub-topbar">
+      <button id="rooms-back" type="button" aria-label="Back to chat">← Chat</button>
+    </div>
+    <div class="room-controls">
+      <button id="deck-btn">DECK — Virtual Office</button>
+      <button id="deck-auto-btn">AUTO — Live Deck</button>
+    </div>
+    <section id="deck" class="panel hidden">
+      <div class="vo-header">
+        <div>
+          <h2 class="vo-title">VIRTUAL OFFICE</h2>
+          <p class="vo-sub">AGENT DECK // LIVE OFFICE</p>
+        </div>
+        <span class="vo-live"><span class="vo-dot"></span>LIVE</span>
+      </div>
+      <div id="computers-panel" class="vo-computers">
+        <div class="vo-computers-head"><h3>KOMPUTER — INTI PRODUK</h3><span id="computers-primary-badge" class="vo-tag run">—</span></div>
+        <p class="vo-note">Satu komputer persisten milik owner dipakai semua bot — mesin di bawah ini adalah inti produk, bukan panel sampingan. Perangkat tertaut (phone + display) dibaca live dari device bridge; bila bridge mati, panel ini bilang mati, bukan kosong.</p>
+        <div id="computers-primary" class="computer-primary">—</div>
+        <div id="computers-devices" class="computer-devices">—</div>
+        <p id="deck-devices-status"></p>
+        <div class="devices-panes">
+          <figure><figcaption>Phone mirror</figcaption><img id="deck-shot-phone" alt="Phone mirror shot"></figure>
+          <figure><figcaption>Browser display (:100)</figcaption><img id="deck-shot-display" alt="Browser display shot"></figure>
+        </div>
+        <h4>Mesin terdaftar</h4>
+        <ul id="computers-list"></ul>
+        <p id="computers-note" class="status"></p>
+      </div>
+      <div class="vo-layout">
+        <aside class="vo-sidebar">
+          <div class="vo-panel">
+            <h3>SISTEM</h3>
+            <div class="vo-hex">VO</div>
+            <p id="vo-system">—</p>
+          </div>
+          <div class="vo-panel">
+            <h3>PERANGKAT</h3>
+            <p id="vo-devices">—</p>
+            <p class="vo-note">Detail lengkap di panel KOMPUTER di atas.</p>
+          </div>
+          <div class="vo-panel">
+            <h3>RINGKASAN</h3>
+            <ul id="vo-stats"></ul>
+          </div>
+        </aside>
+        <div class="vo-main">
+          <div class="vo-room-head"><h3>RUANG KERJA — MONITOR UTAMA</h3><span class="vo-live"><span class="vo-dot"></span>LIVE</span></div>
+          <div id="vo-room" class="vo-room"></div>
+          <div id="vo-filters" class="vo-filters"></div>
+          <h3 class="vo-h">KETERANGAN LANGSUNG — STATUS &amp; TUGAS TIAP AGEN</h3>
+          <ul id="vo-agents"></ul>
+          <h3 class="vo-h">Presence feed</h3>
+          <ul id="deck-feed"></ul>
+          <div id="deck-ops" class="deck-ops">
+            <h3 class="vo-h">Run terakhir</h3>
+            <ul id="deck-runs"></ul>
+            <p id="deck-memory"></p>
+            <h3 class="vo-h">Kesehatan sistem</h3>
+            <p id="deck-health">—</p>
+            <p id="deck-ages">—</p>
+            <h3 class="vo-h">Papan Kanban</h3>
+            <p id="deck-kanban-note" class="status"></p>
+            <div id="deck-kanban"></div>
+            <h3 class="vo-h">Rencana — tugas panjang</h3>
+            <p id="deck-plans-note" class="status"></p>
+            <div id="deck-plans"></div>
+            <h3 class="vo-h">Spend hari ini</h3>
+            <p id="deck-costs-note" class="status"></p>
+            <div id="deck-costs"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ PENGATURAN ============ -->
+  <div class="view" id="view-settings">
+    <div class="sub-topbar">
+      <button id="settings-back" type="button" aria-label="Back to chat">← Chat</button>
+    </div>
+    <section class="panel" id="settings-about">
+      <h2>Tentang</h2>
+      <p class="tagline">Self-hosted. Own server, own data. Characters with real memory and visible presence.</p>
+      <p class="honest">Honest scope: voice is NOT here yet — the real Grok Bot app still leads on voice. What leads here: BYO-API, ownable data, live presence, real memory with zero providers, crew rooms.</p>
+      <p id="conn-status-settings" class="conn-status unknown" role="status">● Memeriksa koneksi…</p>
+      <p class="app-version">Grok Bot — own build · versi 0.6.0</p>
+    </section>
+    <section id="byo" class="panel">
+      <h2>BYO-API — your model, your credentials, your browser only</h2>
+      <p>Your base URL, model, and credential are stored <strong>only in this browser's localStorage</strong> and sent <strong>directly from this browser to the model API</strong>. The local server never receives them — there is no server endpoint that accepts them, and a server request carrying one is rejected.</p>
+      <label>OpenAI-compatible base URL <input id="byo-base" placeholder="https://api.example.com/v1"></label>
+      <label>Model <input id="byo-model" placeholder="model-name"></label>
+      <label>Credential <input id="byo-credential" type="password" placeholder="paste here — stays in this browser"></label>
+      <button id="byo-save">Save in this browser only</button>
+      <button id="byo-clear">Clear from this browser</button>
+      <p id="byo-status" class="status">No BYO-API configured — using the clearly-labelled MOCK model (server-side demo text, no real API call).</p>
+    </section>
+    <section id="auth" class="panel">
+      <h2>Access token — for opening this server from your phone</h2>
+      <p>This server binds loopback only by default. A LAN bind requires a token configured on the server (a file outside this repo, never shown here). Paste that token once — it is stored <strong>only in this browser's localStorage</strong> and sent as the <code>X-Grokbot-Token</code> header on every local <code>/api/*</code> request. It is never sent in a request body and never to the model API.</p>
+      <label>Access token <input id="auth-token" type="password" placeholder="paste server token here — stays in this browser"></label>
+      <button id="auth-save">Save token in this browser</button>
+      <button id="auth-clear">Clear token</button>
+      <p id="auth-status" class="status">No access token saved — loopback use needs none; a token-bound server answers 401 until you save its token.</p>
+    </section>
+    <section class="panel" id="advanced">
+      <h2>Lanjutan</h2>
+      <p class="view-sub">Panel operasional — tetap berjalan di belakang, tidak tampil di layar utama. Data ruang kerja dibaca saja dari sistem lama; teks pesan tidak pernah dibaca.</p>
+      <p class="vo-updated"><span id="deck-updated">—</span></p>
+      <p class="vo-controls"><button id="deck-refresh">Refresh deck</button> <label><input type="checkbox" id="deck-feed-switch" checked> Live legacy feed</label> <span id="deck-status" class="status"></span></p>
+      <div class="always-approve">
+        <label for="approval-level-select">LEVEL PERSETUJUAN — ALWAYS-APPROVE</label>
+        <select id="approval-level-select" disabled>
+          <option value="ask">ask — selalu tanya</option>
+          <option value="edits">edits — auto untuk edit file saja</option>
+          <option value="auto">auto — auto untuk aksi aman</option>
+          <option value="full">full — auto semua (seperti always-approve)</option>
+          <option value="custom">custom — per-aturan</option>
+        </select>
+        <span id="always-approve-indicator" class="always-approve-indicator hidden">LEVEL: —</span>
+        <p id="always-approve-status" class="status">Memeriksa pengaturan persetujuan…</p>
+      </div>
+      <h3 class="vo-h">Template review — install a crew, reviewed first</h3>
+      <p class="vo-note">Paste a template link or an inline grokbot.team package. Nothing installs until you review what it brings and press <strong>Install template</strong>. Routines start <strong>paused</strong>, connections start <strong>disabled</strong>.</p>
+      <label>Template link <input id="template-link" placeholder="https://x.ai/bot/…" autocomplete="off"></label>
+      <button id="template-review-link" type="button">Review link</button>
+      <label>…or paste a package (JSON) <textarea id="template-json" rows="4" placeholder='{"name": "…", "version": "…", …}'></textarea></label>
+      <button id="template-review-inline" type="button">Review package</button>
+      <p id="template-review-status" class="status">No template under review.</p>
+      <div id="template-review" class="template-review"></div>
+      <h3 class="vo-h">Devices — tampilan perangkat</h3>
+      <section id="devices" class="panel">
+        <h2>Devices — character-centered cross-device view</h2>
+        <p class="note">Two panes, side by side: the phone mirror (left) and the browser display on :100 (right). Shots are fetched fresh on every refresh and every turn — never stored as a log. Every action below belongs to a character (name + role); the bridge's raw log (direct CLI use, no character) is shown separately and never presented as character activity.</p>
+        <p><strong>Operating now:</strong> <span id="devices-operating">—</span></p>
+        <p><strong>Last look:</strong> <span id="devices-viewing">—</span></p>
+        <div class="devices-panes">
+          <figure><figcaption>Phone mirror</figcaption><img id="shot-phone" alt="Phone mirror shot"></figure>
+          <figure><figcaption>Browser display (:100)</figcaption><img id="shot-display" alt="Browser display shot"></figure>
+        </div>
+        <button id="devices-refresh">Refresh shots</button>
+        <button id="devices-look">Look — attach shots to this character's turn</button>
+        <p id="devices-vision-note" class="status"></p>
+        <h3>Presence feed (character-attributed)</h3>
+        <ul id="devices-feed"></ul>
+        <h3>Bridge log (unattributed — direct CLI use only)</h3>
+        <ul id="devices-bridge-log"></ul>
+        <h3>Device actions — this character operates</h3>
+        <label>Device
+          <select id="action-device">
+            <option value="phone">phone</option>
+            <option value="browser">browser</option>
+          </select>
+        </label>
+        <label>Action <select id="action-name"></select></label>
+        <label>Params <input id="action-params" placeholder="tap: x y"></label>
+        <button id="devices-act">Run action</button>
+        <p id="devices-action-result" class="status"></p>
+        <p class="note">Safety: phone input is refused when locked, screen off, or undetermined, and text is refused into banking/wallet/authenticator apps. Browser actions run xdotool on :100. Screenshots only go to a model when BYO-API is configured AND you press Look before sending.</p>
+      </section>
+    </section>
+  </div>
+</div>
+
+<!-- ============ DRAWER (0.6.0): the bot list beside the chat ============
+     Slides in from the left (see #drawer in style.css). One row per
+     bot (renderBotList, same ids as the old list screen), then the
+     only two navigation rows: Ruangan and Pengaturan. The old list
+     top bar (owner avatar, bell, search, +) and the connection
+     line live here now, so no handler lost its element. -->
+<div id="drawer-scrim" class="drawer-scrim hidden"></div>
+<aside id="drawer" class="drawer" aria-label="Bot list">
+  <div class="drawer-topbar">
+    <button id="owner-avatar" class="owner-avatar" type="button" aria-label="Settings">S</button>
+    <div id="list-actions" class="pill-actions">
+      <button id="notif-btn" type="button" aria-label="Notifications">🔔<span id="notif-badge" class="notif-badge hidden">0</span></button>
+      <button id="search-btn" type="button" aria-label="Search">🔍</button>
+      <button id="create-btn" type="button" aria-label="Create">+</button>
+    </div>
+  </div>
+  <div id="notif-panel" class="notif-panel hidden">
+    <h2>Notifications</h2>
+    <p id="notif-status" class="status"></p>
+    <ul id="notif-list"></ul>
+  </div>
+  <p id="conn-status" class="conn-status unknown" role="status">● Memeriksa koneksi…</p>
+  <div id="list-search" class="list-search hidden">
+    <input id="list-search-input" placeholder="Search bots…" autocomplete="off">
+  </div>
+  <h2 class="section-head">Personal</h2>
+  <ul id="bot-list" class="bot-list"></ul>
+  <p id="bot-list-empty" class="empty-state hidden">Tap + to create a bot</p>
+  <hr class="drawer-divider">
+  <button id="drawer-rooms" type="button" class="drawer-nav">Ruangan</button>
+  <button id="drawer-settings" type="button" class="drawer-nav">Pengaturan</button>
+</aside>
+
+<!-- ============ CREATE DIALOG (floating card, not a bottom sheet) ============ -->
+<div id="create-scrim" class="scrim hidden">
+  <div id="create-dialog" class="create-dialog" role="dialog" aria-label="Create">
+    <div id="create-actions">
+      <h2>Create</h2>
+      <div class="create-row">
+        <button id="create-new-bot" type="button">NEW BOT</button>
+        <button id="create-new-group" type="button">NEW GROUP</button>
+        <button id="create-new-space" type="button">NEW SPACE</button>
+      </div>
+    </div>
+    <div id="create-name-step" class="hidden">
+      <h2>Name your bot</h2>
+      <p class="note">The bot needs a name before it is created — the character file is named after it.</p>
+      <input id="create-bot-name" placeholder="Bot name" autocomplete="off" maxlength="60">
+      <p id="create-bot-name-error" class="status"></p>
+      <button id="create-bot-name-submit" type="button">Create</button>
+    </div>
+    <div id="create-group-step" class="hidden">
+      <h2>New group</h2>
+      <input id="create-group-name" placeholder="Group name" autocomplete="off">
+      <div id="create-group-members" class="group-members"></div>
+      <p id="create-group-error" class="status"></p>
+      <button id="create-group-submit" type="button">Create group</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/local-data.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/voice.js"></script>
+<script>
+  // Voice PTT wiring (VOICE-INTEGRATION.md §2): askModel menjawab
+  // transcript suara lewat jalur chat deck yang sudah ada.
+  // Mengembalikan string balasan, atau throw bila gagal (VoicePTT
+  // mengubahnya menjadi state error "answer-failed" — tidak ada
+  // fallback diam-diam ke mock).
+  async function askModelViaDeck(transcript) {
+    const b = byo(); // dari app.js — { baseUrl, model, credential } atau null
+    if (!b || !b.baseUrl || !b.credential) {
+      throw new Error("BYO-API not configured");
+    }
+    // Cost gate pre-flight (FinOps-lite §5): cap tercapai = tugas
+    // suara ditolak sebelum provider dipanggil.
+    const gate = await checkCapBeforeTask(currentChar);
+    if (!gate.allowed) throw new Error(gate.message || "cap harian tercapai");
+    // A voice turn is a reply in flight, same as a typed message:
+    // the Stop pill (chat top bar) shows until it ends, and so
+    // does the drawer row for the working bot (updateWorkingUI),
+    // and so does the typing indicator (showTyping/hideTyping
+    // from app.js — the reply itself is not typewriter-animated
+    // here, because the spoken answer must start without delay).
+    setWorking(currentRoom, currentChar);
+    showTyping();
+    try {
+      const savedUser = await persistMessage(currentRoom, currentChar, transcript, "user");
+      const taskId = (savedUser && savedUser.message && savedUser.message.id) || currentRoom;
+      const resp = await fetch(b.baseUrl + "/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + b.credential
+        },
+        body: JSON.stringify({
+          model: b.model || "gpt-4o-mini",
+          messages: [{ role: "user", content: transcript }]
+        })
+      });
+      if (!resp.ok) throw new Error("Model API returned HTTP " + resp.status);
+      const data = await resp.json();
+      // Cost ledger (FinOps-lite §6): laporkan pemakaian voice ke
+      // server — angka + nama model saja, TIDAK PERNAH kunci.
+      await reportUsage(currentChar, taskId, "voice", data);
+      const reply = (data.choices && data.choices[0] && data.choices[0].message
+        && data.choices[0].message.content) || "";
+      if (!reply) throw new Error("Model API returned no reply text.");
+      await persistMessage(currentRoom, currentChar, reply, "assistant");
+      loadRoom();
+      return reply;
+    } finally {
+      clearWorking();
+      hideTyping();
+    }
+  }
+
+  const voice = new VoicePTT({
+    askModel: askModelViaDeck,
+    onStateChange: (state, detail) => {
+      const label = {
+        idle: "Voice: idle",
+        recording: "Voice: merekam… (lepas tombol untuk mengirim)",
+        transcribing: "Voice: mentranskripsi…",
+        answering: "Voice: model menjawab…",
+        speaking: "Voice: berbicara…",
+        error: "Voice: error — " + (detail && detail.message ? detail.message : "")
+      }[state] || ("Voice: " + state);
+      document.getElementById("voice-ptt-status").textContent = label;
+      document.getElementById("voice-ptt-btn").disabled = (state === "transcribing" || state === "answering" || state === "speaking");
+    },
+    onTranscript: (text) => {
+      document.getElementById("voice-ptt-transcript").textContent = "Kamu: " + text;
+    }
+  });
+
+  // Push-to-talk: tekan-tahan untuk merekam, lepas untuk memproses.
+  const pttBtn = document.getElementById("voice-ptt-btn");
+  pttBtn.addEventListener("pointerdown", () => { voice.startRecording(); });
+  pttBtn.addEventListener("pointerup", () => { voice.stopAndProcess(); });
+  pttBtn.addEventListener("pointerleave", () => {
+    if (voice.state === "recording") voice.stopAndProcess();
+  });
+  // Klik biasa sebagai cadangan (toggle) bila pointer events tidak tersedia:
+  pttBtn.addEventListener("click", () => {
+    if (voice.state === "idle" || voice.state === "error") voice.toggle();
+  });
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+</body>
+</html>
