@@ -118,6 +118,30 @@ Untuk build release, buat keystore sendiri dan konfigurasikan signing di `androi
 3. Buka **Settings → Pilih model** — pilih preset dan masukkan API key kamu (BYOK).
 4. Buat bot pertama dan mulai ngobrol.
 
+### Access token server (kalau pakai server pendamping)
+
+Kalau server pendamping di-deploy supaya bisa diakses dari HP (bind LAN), server **wajib pakai access token**. Ini pengaman supaya hanya HP kamu yang bisa memakai server itu.
+
+**Di server** — set token lewat file atau env var saat menjalankan server:
+
+```bash
+GROKBOT_APP_HOST=0.0.0.0 GROKBOT_APP_OPEN_LAN=1 GROKBOT_APP_TOKEN_FILE=/path/to/token python3 -u app/server.py
+```
+
+atau:
+
+```bash
+GROKBOT_APP_HOST=0.0.0.0 GROKBOT_APP_OPEN_LAN=1 GROKBOT_APP_TOKEN=<token-rahasia> python3 -u app/server.py
+```
+
+Token tersimpan di luar repo (file `chmod 600` atau env var) dan tidak pernah di-print di log — buka file-nya langsung untuk melihat isinya.
+
+**Di aplikasi** — buka pengaturan server, isi kolom access token dengan token dari server, lalu simpan. Aplikasi mengirim token itu lewat header `X-Grokbot-Token` di setiap request.
+
+**Kalau muncul `401 - Simpan akses token dahulu`:** artinya token belum disimpan di aplikasi (atau salah). Masukkan token server yang benar di pengaturan server, simpan, lalu coba lagi.
+
+> 💡 Token akses server ini **beda** dengan API key model (BYOK). Token server = izin memakai server pendamping kamu. API key model = izin memakai model AI. Kamu butuh keduanya kalau pakai server + chat model.
+
 ### Tes
 
 ```bash
@@ -141,7 +165,7 @@ Kontribusi dipersilakan! Silakan buka issue atau pull request. Pastikan `npm tes
 
 ## 📄 Lisensi
 
-Lisensi akan ditentukan. (Belum dipilih — repo ini belum menyertakan file LICENSE.)
+MIT License — lihat file [LICENSE](LICENSE) (Copyright 2026 Samir Jamal).
 
 ---
 
