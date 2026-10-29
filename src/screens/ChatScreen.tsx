@@ -202,6 +202,9 @@ export function ChatScreen() {
   const [input, setInput] = useState('');
   const [replying, setReplying] = useState(false);
   const [capBlocked, setCapBlocked] = useState(false);
+  // Menu ••• sheet (lihat openMenu): Modal sendiri, bukan Alert —
+  // Alert Android mentok 3 tombol sehingga "Hapus bot" tak pernah tampil.
+  const [menuVisible, setMenuVisible] = useState(false);
   // Peringatan server tidak terjangkau (0.10.12, perbaikan bug chat
   // hilang di HP): persist/getChat gagal DIAM-DIAM sebelum ini
   // (try/catch kosong, "offline-first") sehingga user tidak tahu
@@ -563,37 +566,35 @@ export function ChatScreen() {
     }
   }, [botId]);
 
+  // 0.10.17: menu ••• adalah Modal sheet sendiri, BUKAN Alert.alert.
+  // Alert Android mentok 3 tombol (positive/negative/neutral) — menu
+  // 6 tombol di atas terpotong jadi 3 pertama saja, sehingga "Hapus
+  // bot" (tombol ke-4) TAK PERNAH tampil di Android. Itulah akar
+  // keluhan "tidak bisa hapus bot" — bukan build basi.
   const openMenu = useCallback(() => {
-    const buttons: AlertButton[] = [
-      {
-        text: 'Lihat info',
-        onPress: () =>
-          Alert.alert(
-            displayName,
-            character?.role || character?.summary || roomName || 'Ruang chat.',
-            [{ text: 'OK' }],
-          ),
-      },
-      {
-        // 0.9.6, permintaan Sam: Computer pindah ke DALAM chat bot.
-        // 0.10.0: "Open computer" membuka Team Computer bot ini
-        // (layar browser live + Take control), bukan daftar registry.
-        text: 'Open computer',
-        onPress: () =>
-          navigation.navigate('TeamComputer', { characterId: botId ?? undefined, scope: 'team' }),
-      },
-    ];
-    if (botId) {
-      // 0.9.8, permintaan Sam: avatar bisa diganti (cycle preset).
-      buttons.push({ text: 'Ganti avatar', onPress: () => void changeAvatar() });
-      buttons.push({ text: 'Hapus bot', style: 'destructive', onPress: confirmDeleteBot });
-    }
-    if (roomId !== 'general') {
-      buttons.push({ text: 'Hapus chat', style: 'destructive', onPress: confirmDeleteChat });
-    }
-    buttons.push({ text: 'Batal', style: 'cancel' });
-    Alert.alert(displayName, 'Pilih aksi', buttons);
-  }, [botId, changeAvatar, character, confirmDeleteBot, confirmDeleteChat, displayName, navigation, roomId, roomName]);
+    setMenuVisible(true);
+  }, []);
+
+  const closeMenu = useCallback(() => {
+    setMenuVisible(false);
+  }, []);
+
+  const showInfo = useCallback(() => {
+    closeMenu();
+    Alert.alert(
+      displayName,
+      character?.role || character?.summary || roomName || 'Ruang chat.',
+      [{ text: 'OK' }],
+    );
+  }, [character, closeMenu, displayName, roomName]);
+
+  const openComputer = useCallback(() => {
+    closeMenu();
+    // 0.9.6, permintaan Sam: Computer pindah ke DALAM chat bot.
+    // 0.10.0: "Open computer" membuka Team Computer bot ini
+    // (layar browser live + Take control), bukan daftar registry.
+    navigation.navigate('TeamComputer', { characterId: botId ?? undefined, scope: 'team' });
+  }, [botId, closeMenu, navigation]);
 
   // ALWAYS ALLOW (0.10.7, Sam): tool tulis MCP selalu diizinkan —
   // tidak ada kartu approval, tidak ada jeda menunggu pengguna.
@@ -909,7 +910,7 @@ export function ChatScreen() {
         // diam-diam. Simpan pesan user, lalu tampilkan error jelas
         // sebagai balasan (dan simpan juga supaya tidak hilang).
         const errText =
-          '⚠️ BYO tidak terbaca — konfigurasi model (Poolside Laguna) yang sebelumnya tersimpan kini tidak bisa dibaca dari HP ini. Pesanmu tersimpan, tapi aku tidak bisa menjawab dengan model asli. Coba tutup lalu buka lagi aplikasi; bila masih begini, import ulang BYO (Settings → BYO) atau minta Muse mengecek.';
+          '⚠️ BYO tidak terbaca — konfigurasi model yang sebelumnya tersimpan kini tidak bisa dibaca dari HP ini. Pesanmu tersimpan, tapi aku tidak bisa menjawab dengan model. Coba tutup lalu buka lagi aplikasi; bila masih begini, isi ulang BYO (Settings → Model API sendiri) atau minta Muse mengecek.';
         try {
           const savedUser = await persistMessage(roomId, characterId ?? null, text, 'user');
           if (savedUser) {
@@ -1438,6 +1439,62 @@ export function ChatScreen() {
         </Pressable>
       </View>
 
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <Pressable style={styles.menuScrim} onPress={closeMenu}>
+          <View style={styles.menuCard}>
+            <Text style={styles.menuTitle}>{displayName}</Text>
+            <Text style={styles.menuSubtitle}>Pilih aksi</Text>
+            <Pressable style={styles.menuRow} onPress={showInfo}>
+              <Text style={styles.menuRowText}>Lihat info</Text>
+            </Pressable>
+            <Pressable style={styles.menuRow} onPress={openComputer}>
+              <Text style={styles.menuRowText}>Open computer</Text>
+            </Pressable>
+            {botId ? (
+              <>
+                <Pressable
+                  style={styles.menuRow}
+                  onPress={() => {
+                    closeMenu();
+                    void changeAvatar();
+                  }}
+                >
+                  <Text style={styles.menuRowText}>Ganti avatar</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.menuRow}
+                  onPress={() => {
+                    closeMenu();
+                    confirmDeleteBot();
+                  }}
+                >
+                  <Text style={[styles.menuRowText, styles.menuDangerText]}>Hapus bot</Text>
+                </Pressable>
+              </>
+            ) : null}
+            {roomId !== 'general' ? (
+              <Pressable
+                style={styles.menuRow}
+                onPress={() => {
+                  closeMenu();
+                  confirmDeleteChat();
+                }}
+              >
+                <Text style={[styles.menuRowText, styles.menuDangerText]}>Hapus chat</Text>
+              </Pressable>
+            ) : null}
+            <Pressable style={[styles.menuRow, styles.menuCancelRow]} onPress={closeMenu}>
+              <Text style={[styles.menuRowText, styles.menuCancelText]}>Batal</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
       {capBlocked ? (
         <View style={styles.capBanner}>
           <Text style={styles.capText}>Batas pemakaian tercapai — pesan tidak dikirim.</Text>
@@ -1803,6 +1860,46 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  menuScrim: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  menuCard: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    padding: spacing.lg,
+  },
+  menuTitle: {
+    color: colors.text,
+    fontSize: type.title,
+    fontWeight: '700',
+  },
+  menuSubtitle: {
+    color: colors.muted,
+    fontSize: type.body,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  menuRow: {
+    paddingVertical: spacing.md,
+  },
+  menuRowText: {
+    color: colors.accent,
+    fontSize: type.body,
+    fontWeight: '600',
+  },
+  menuDangerText: {
+    color: colors.danger,
+  },
+  menuCancelRow: {
+    marginTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.surface3,
   },
   capBanner: {
     marginHorizontal: spacing.lg,

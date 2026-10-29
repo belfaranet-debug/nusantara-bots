@@ -8,8 +8,6 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { tryImportByoConfig } from './src/api/byoImport';
-import { getByo } from './src/api/byo';
-import { recordImportedConfig } from './src/api/modelProfiles';
 import { loadAvatarOverrides } from './src/api/avatar';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { ChatScreen } from './src/screens/ChatScreen';
@@ -31,20 +29,7 @@ export default function App() {
     // One-time BYO import: reads byo-import.json from the app
     // document directory when present, saves it to SecureStore and
     // deletes the file. Absent/invalid files are ignored silently.
-    // 0.10.16: sesudah import (atau bila tidak ada file import),
-    // catat config BYO aktif ke profil preset yang cocok
-    // (modelProfiles) supaya credential itu diingat untuk pemilih
-    // model. Ini juga MIGRASI untuk config BYO dari versi lama
-    // (mis. Poolside di emulator / Agnes di HP Sam): tanpa ini,
-    // pemilih akan mengira preset aktif "belum ada credential"
-    // padahal credential-nya sudah tersimpan di BYO aktif.
-    // recordImportedConfig idempotent — aman dipanggil tiap launch.
-    tryImportByoConfig()
-      .then(async () => {
-        const byo = await getByo().catch(() => null);
-        if (byo) await recordImportedConfig(byo).catch(() => undefined);
-      })
-      .catch(() => undefined);
+    tryImportByoConfig().catch(() => undefined);
     // Override avatar per bot (0.9.8): muat dari AsyncStorage ke
     // cache api/blob supaya GhostBlob/Ghost3D langsung memakai
     // look yang dipilih Sam (tanpa override = hash deterministik).

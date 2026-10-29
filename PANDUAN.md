@@ -13,22 +13,22 @@ Panduan singkat buat kamu yang baru install Nusantara Bots. Ikuti nomor 1-2-3, s
 ## Langkah 1 — Install APK
 
 1. Download APK dari halaman [Releases](https://github.com/sam666-byte/nusantara-bots/releases):
-   - `nusantara-bots-0.10.16-arm64.apk` — untuk HP Android (kebanyakan HP).
-   - `nusantara-bots-0.10.16-x86_64.apk` — untuk emulator.
+   - `nusantara-bots-0.10.17-arm64.apk` — untuk HP Android (kebanyakan HP).
+   - `nusantara-bots-0.10.17-x86_64.apk` — untuk emulator.
 2. Install APK di HP, lalu buka aplikasinya.
 
 ---
 
 ## Langkah 2 — Masukkan API key model (biar bot bisa jawab)
 
-Tanpa ini, bot tidak bisa ngobrol sama AI.
+Tanpa ini, bot tidak bisa ngobrol sama AI. Aplikasi ini **tidak menyertakan model atau API key apapun** — kamu pakai provider AI pilihanmu sendiri (yang kompatibel dengan API OpenAI).
 
-1. Buka aplikasi → **Settings → Pilih model**.
-2. Pilih preset: **Agnes**, **Poolside Laguna**, **Sam AI**, atau **Big Pickle**.
-3. Masukkan **API key** kamu dari provider itu.
+1. Buka aplikasi → **Settings → Model API sendiri (BYO)**.
+2. Isi **Base URL** provider, **nama model**, dan **API key** kamu.
+3. Tekan **Simpan BYO**.
 4. Selesai — bot sudah bisa ngobrol.
 
-**Dapat API key dari mana?** Daftar di dashboard provider yang kamu pilih (misalnya Agnes atau Poolside), lalu copy API key-nya. Key disimpan hanya di HP kamu (SecureStore) dan tidak pernah dikirim ke mana-mana selain ke provider yang kamu pilih.
+**Dapat API key dari mana?** Daftar di dashboard provider AI pilihanmu, lalu copy API key-nya. Key disimpan hanya di HP kamu (SecureStore) dan tidak pernah dikirim ke mana-mana selain ke provider yang kamu pilih.
 
 ---
 
@@ -61,9 +61,9 @@ Artinya **access token server belum disimpan di aplikasi** (atau salah).
 
 | | Token server | API key model (BYOK) |
 |---|---|---|
-| **Buat apa** | Izin memakai server di PC kamu | Izin memakai AI (Agnes/Poolside/dll) |
+| **Buat apa** | Izin memakai server di PC kamu | Izin memakai AI (provider pilihanmu) |
 | **Didapat dari** | Waktu deploy server | Dashboard provider AI |
-| **Diisi di** | Pengaturan server aplikasi | Settings → Pilih model |
+| **Diisi di** | Pengaturan server aplikasi | Settings → Model API sendiri (BYO) |
 | **Kalau belum diisi** | Error 401 | Bot tidak bisa ngobrol |
 
 Keduanya harus diisi di tempat yang berbeda. Kalau bingung yang mana, lihat tabel di atas.

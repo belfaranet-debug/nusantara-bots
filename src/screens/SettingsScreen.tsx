@@ -11,9 +11,10 @@
 // menyimpan lewat form aman di chat (request_credential) dan
 // menghapus dari kartu ini.
 //
-// Provider: pilih preset (mis. OxionAI) untuk mengisi Base URL
-// otomatis dan memilih model dari daftar, atau Custom untuk
-// Base URL + model bebas. Preset tidak membawa credential apa pun.
+// Model API sendiri (BYO): tidak ada preset model bawaan.
+// Pengguna mengisi Base URL + model + credential provider-nya
+// sendiri (OpenAI-compatible). Credential hanya dipakai lewat
+// streamByoReply ke model API itu.
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -37,16 +38,6 @@ import {
   setServerUrl,
 } from '../api/client';
 import { clearByo, getByo, saveByo } from '../api/byo';
-import {
-  MODEL_PRESETS,
-  NO_CREDENTIAL_MESSAGE,
-  activateModel,
-  getActiveModelId,
-  getModelProfiles,
-  getPreset,
-  inferPresetId,
-  saveModelProfile,
-} from '../api/modelProfiles';
 import { deleteSecret, listSecrets, type StoredSecret } from '../api/vault';
 import { ApiError } from '../api/types';
 import { PROVIDERS, getProvider, inferProviderId } from '../api/providers';
@@ -54,7 +45,7 @@ import type { ByoConfig } from '../api/types';
 import type { RootStackParamList } from '../navigation';
 import { colors, radii, spacing, type } from '../theme';
 
-export const APP_VERSION = '0.10.16';
+export const APP_VERSION = '0.10.17';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -66,14 +57,6 @@ export function SettingsScreen() {
   const [byoCredential, setByoCredential] = useState('');
   const [byoSaved, setByoSaved] = useState(false);
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
-  // Pemilih model (0.10.16): preset mana yang aktif + preset mana
-  // yang credential-nya sudah tersimpan (siap dipakai sekali ketuk).
-  const [activeModelId, setActiveModelId] = useState('custom');
-  const [profileReady, setProfileReady] = useState<Record<string, boolean>>({});
-  // Preset yang sedang menunggu credential (belum tersimpan) +
-  // isi field credential-nya.
-  const [pendingPresetId, setPendingPresetId] = useState<string | null>(null);
-  const [pendingCredential, setPendingCredential] = useState('');
   // Credential tersimpan dipegang di memori (tidak pernah ditampilkan)
   // supaya menyimpan ulang base URL/model tanpa mengisi credential
   // tidak menghapus credential lama.
@@ -94,14 +77,6 @@ export function SettingsScreen() {
 
   const provider = getProvider(providerId);
   const providerModels = provider.models;
-
-  // Label model aktif untuk pemilih (0.10.16).
-  const activePreset = getPreset(activeModelId);
-  const activeModelLabel = activePreset
-    ? `${activePreset.name} (${activePreset.model})`
-    : byoSaved
-      ? `${byoModel || 'Custom'} (BYO)`
-      : 'Belum ada';
 
   const loadVault = useCallback(async () => {
     setVaultState('loading');
@@ -127,19 +102,6 @@ export function SettingsScreen() {
       savedCredentialRef.current = byo.credential;
       setByoSaved(true);
     }
-    // Pemilih model (0.10.16): preset aktif + credential mana yang
-    // sudah tersimpan. Gagal baca = anggap custom / belum siap.
-    const activeId = await getActiveModelId().catch(() => 'custom');
-    setActiveModelId(activeId);
-    const profiles: Record<string, ByoConfig> = await getModelProfiles().catch(() => ({}));
-    setProfileReady(
-      Object.fromEntries(
-        MODEL_PRESETS.map((p) => [
-          p.id,
-          Boolean(profiles[p.id]?.credential || p.defaultCredential),
-        ]),
-      ),
-    );
     const url = await getServerUrl().catch(() => '');
     setServerUrlState(url);
     const tok = await getAuthToken().catch(() => '');
@@ -148,78 +110,6 @@ export function SettingsScreen() {
     setHealthy(ok);
     await loadVault();
   }, [loadVault]);
-
-  // Sinkronkan form BYO lama dengan config aktif (dipakai sesudah
-  // ganti model lewat pemilih — form tetap menampilkan yang aktif).
-  const syncByoForm = useCallback(async () => {
-    const byo = await getByo().catch(() => null);
-    if (!byo) return;
-    setByoBaseUrl(byo.baseUrl);
-    setByoModel(byo.model);
-    setProviderId(inferProviderId(byo.baseUrl));
-    savedCredentialRef.current = byo.credential;
-    setByoSaved(true);
-  }, []);
-
-  // Pemilih model (0.10.16): ketuk preset = jadikan model aktif
-  // untuk semua bot. Bila credential preset belum tersimpan, buka
-  // prompt isi credential (bukan gagal diam-diam).
-  const selectModel = async (id: string) => {
-    const preset = getPreset(id);
-    if (!preset) return;
-    if (!profileReady[id]) {
-      setPendingPresetId(id);
-      setPendingCredential('');
-      return;
-    }
-    setBusy(true);
-    try {
-      await activateModel(id);
-      setActiveModelId(id);
-      await syncByoForm();
-      setPendingPresetId(null);
-      Alert.alert('Model', `Model aktif: ${preset.name} (${preset.model}).`);
-    } catch (e) {
-      if (e instanceof Error && e.message === NO_CREDENTIAL_MESSAGE) {
-        setPendingPresetId(id);
-        setPendingCredential('');
-      } else {
-        Alert.alert('Model', 'Gagal mengaktifkan model.');
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Simpan credential preset yang belum tersimpan, lalu aktifkan.
-  // Credential diingat per-model untuk pilihan berikutnya.
-  const savePendingCredential = async () => {
-    if (!pendingPresetId) return;
-    const preset = getPreset(pendingPresetId);
-    if (!preset) return;
-    const cred = pendingCredential.trim();
-    if (!cred) {
-      Alert.alert('Model', 'Credential wajib diisi.');
-      return;
-    }
-    setBusy(true);
-    try {
-      await activateModel(pendingPresetId, cred);
-      setActiveModelId(pendingPresetId);
-      setProfileReady((prev) => ({ ...prev, [pendingPresetId]: true }));
-      await syncByoForm();
-      setPendingPresetId(null);
-      setPendingCredential('');
-      Alert.alert(
-        'Model',
-        `Model aktif: ${preset.name} (${preset.model}). Credential disimpan untuk pilihan berikutnya.`,
-      );
-    } catch {
-      Alert.alert('Model', 'Gagal menyimpan credential.');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   useEffect(() => {
     load();
@@ -242,16 +132,10 @@ export function SettingsScreen() {
     setSecrets((prev) => prev.filter((s) => s.service !== service));
   };
 
+  // BYOK saja: satu-satunya provider adalah Custom (base URL +
+  // model bebas, diisi manual). Tidak ada daftar preset lagi.
   const selectProvider = (id: string) => {
-    const next = getProvider(id);
-    setProviderId(next.id);
-    if (next.id === 'custom') return;
-    // Preset: isi Base URL otomatis; model ke default kalau model
-    // sekarang bukan salah satu model provider ini.
-    setByoBaseUrl(next.baseUrl);
-    if (!next.models.includes(byoModel)) {
-      setByoModel(next.defaultModel);
-    }
+    setProviderId(getProvider(id).id);
   };
 
   const saveByoForm = async () => {
@@ -274,15 +158,6 @@ export function SettingsScreen() {
       await saveByo(cfg);
       savedCredentialRef.current = credential;
       setByoSaved(true);
-      // Form manual tetap sinkron dengan pemilih model: tebak preset
-      // dari base URL (bila cocok), dan ingat credential-nya untuk
-      // preset itu bila cocok (0.10.16).
-      const presetId = inferPresetId(cfg.baseUrl);
-      setActiveModelId(presetId);
-      if (presetId !== 'custom') {
-        await saveModelProfile(presetId, cfg).catch(() => undefined);
-        setProfileReady((prev) => ({ ...prev, [presetId]: true }));
-      }
       setByoCredential(''); // Kosongkan credential dari field setelah disimpan.
       Alert.alert('BYO', 'Konfigurasi BYO disimpan.');
     } catch {
@@ -302,12 +177,6 @@ export function SettingsScreen() {
       setByoCredential('');
       savedCredentialRef.current = '';
       setByoSaved(false);
-      // Config aktif dihapus — pemilih kembali ke custom. Credential
-      // per-model yang tersimpan TIDAK ikut dihapus (tetap bisa
-      // dipakai lagi dengan sekali ketuk).
-      setActiveModelId('custom');
-      setPendingPresetId(null);
-      setPendingCredential('');
       Alert.alert('BYO', 'Konfigurasi BYO dihapus.');
     } catch {
       Alert.alert('BYO', 'Gagal menghapus konfigurasi BYO.');
@@ -362,73 +231,6 @@ export function SettingsScreen() {
           {healthy === null ? 'Status koneksi belum dicek.' : healthy ? 'Terhubung ke server' : 'Lokal — server tidak terjangkau'}
         </Text>
       </View>
-
-      {/* Pemilih model (0.10.16): satu ketuk ganti model aktif untuk
-          semua bot. Credential tiap model tersimpan aman di HP ini
-          (SecureStore) dan hanya dikirim ke provider model itu. */}
-      <Text style={styles.section}>Pilih model</Text>
-      <Text style={styles.hint}>Model aktif: {activeModelLabel}.</Text>
-      {MODEL_PRESETS.map((p) => (
-        <Pressable
-          key={p.id}
-          style={styles.optionRow}
-          onPress={() => void selectModel(p.id)}
-          disabled={busy}
-          accessibilityLabel={`Pilih model ${p.name}`}
-        >
-          <View style={[styles.optionDot, activeModelId === p.id && styles.optionDotSelected]} />
-          <View style={styles.optionTextWrap}>
-            <Text style={styles.optionText}>{p.name}</Text>
-            <Text style={styles.optionSub}>
-              {p.model} · {p.hint}
-            </Text>
-            {!profileReady[p.id] ? (
-              <Text style={styles.optionSub}>Belum ada credential — ketuk untuk isi / import BYO</Text>
-            ) : null}
-          </View>
-          {activeModelId === p.id ? <Text style={styles.modelActiveCheck}>✓</Text> : null}
-        </Pressable>
-      ))}
-      {pendingPresetId ? (
-        <View>
-          <Text style={styles.label}>
-            Credential {getPreset(pendingPresetId)?.name ?? ''} (API key)
-          </Text>
-          <Text style={styles.hint}>
-            Belum tersimpan. Isi sekali di sini, atau import file byo-import.json untuk model ini
-            (cara lama) — credential diingat untuk pilihan berikutnya.
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="API key"
-            placeholderTextColor={colors.muted}
-            value={pendingCredential}
-            onChangeText={setPendingCredential}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-          <View style={styles.buttonRow}>
-            <Pressable
-              style={[styles.button, styles.buttonPrimary]}
-              onPress={() => void savePendingCredential()}
-              disabled={busy}
-            >
-              <Text style={styles.buttonPrimaryText}>Simpan &amp; aktifkan</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.buttonGhost]}
-              onPress={() => {
-                setPendingPresetId(null);
-                setPendingCredential('');
-              }}
-              disabled={busy}
-            >
-              <Text style={styles.buttonGhostText}>Batal</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
 
       <Text style={styles.section}>Model API sendiri (BYO)</Text>
       <Text style={styles.hint}>
@@ -816,11 +618,6 @@ const styles = StyleSheet.create({
   modelFieldChevron: {
     color: colors.muted,
     fontSize: type.body,
-  },
-  modelActiveCheck: {
-    color: colors.accent,
-    fontSize: type.body,
-    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,

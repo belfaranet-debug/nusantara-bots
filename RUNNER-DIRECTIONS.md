@@ -50,7 +50,7 @@ server live 8780. Ia murni klien HTTP:
 
 - ke server live (baca rooms/chat, tulis pesan, pakai tool komputer),
 - ke model (OpenAI-compatible `POST /v1/chat/completions` ke router
-  Sam AI 3001, model `auto`).
+  model lokal di port 3001, model `auto`).
 
 Runner TIDAK mengimpor kode server live, TIDAK menyentuh file
 `data/`/`characters/`/`devices/`, TIDAK mengubah server 8780, dan
@@ -139,7 +139,7 @@ dijalankan ulang, termasuk setelah runner restart.
 |---|---|---|
 | `RUNNER_SERVER` | `http://127.0.0.1:8780` | Server live |
 | `RUNNER_SERVER_TOKEN` | (kosong) | Header `X-Grokbot-Token` bila server kelak butuh token |
-| `RUNNER_MODEL_BASE_URL` | `http://127.0.0.1:3001/v1` | Router Sam AI |
+| `RUNNER_MODEL_BASE_URL` | `http://127.0.0.1:3001/v1` | Router model lokal (OpenAI-compatible) |
 | `RUNNER_MODEL` | `auto` | Model router |
 | `RUNNER_ENV_FILE` | `~/.hermes/.env` | File env tempat kunci dibaca |
 | `RUNNER_STATUS_PORT` | `8791` | Port status (0.0.0.0, hanya baca) |

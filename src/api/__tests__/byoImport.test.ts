@@ -43,16 +43,16 @@ function makeFs(overrides: Partial<FakeFs> = {}): FakeFs {
 }
 
 const VALID_JSON = JSON.stringify({
-  baseUrl: 'https://oxionai.com/v1',
-  model: 'grok-4.6',
+  baseUrl: 'https://api.contoh.com/v1',
+  model: 'model-contoh',
   credential: 'test-key-123',
 });
 
 describe('parseByoImport', () => {
   it('accepts a valid config object', () => {
     expect(parseByoImport(VALID_JSON)).toEqual({
-      baseUrl: 'https://oxionai.com/v1',
-      model: 'grok-4.6',
+      baseUrl: 'https://api.contoh.com/v1',
+      model: 'model-contoh',
       credential: 'test-key-123',
     });
   });
@@ -145,8 +145,8 @@ describe('tryImportByoConfig', () => {
     expect(await tryImportByoConfig(fs, save)).toBe('imported');
     expect(save).toHaveBeenCalledTimes(1);
     expect(save).toHaveBeenCalledWith({
-      baseUrl: 'https://oxionai.com/v1',
-      model: 'grok-4.6',
+      baseUrl: 'https://api.contoh.com/v1',
+      model: 'model-contoh',
       credential: 'test-key-123',
     });
     expect(fs.deleteAsync).toHaveBeenCalledTimes(1);
