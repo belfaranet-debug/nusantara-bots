@@ -152,6 +152,31 @@ Token tersimpan di luar repo (file `chmod 600` atau env var) dan tidak pernah di
 
 > 💡 Token akses server ini **beda** dengan API key model (BYOK). Token server = izin memakai server pendamping kamu. API key model = izin memakai model AI. Kamu butuh keduanya kalau pakai server + chat model.
 
+### Runner server-side (opsional, self-hosted)
+
+Loop agen normalnya jalan di HP — begitu aplikasi di-background,
+turn bisa mati. **Runner** adalah service Python kecil (stdlib saja)
+yang menjalankan perintah bot di server pendamping, jadi bot tetap
+jalan walau aplikasi ditutup.
+
+Rantai komandonya: **kamu → Chief → sub-bot**. Hanya perintah yang
+datang lewat room Chief yang dijalankan; perintah dari room bot
+lain diabaikan. Untuk menyuruh sub-bot tertentu, tulis `@id-bot` di
+awal tugas (mis. `RUNNER: @yt-analytics baca Analytics channel`).
+Hasil lengkap diposting ke room sub-bot, salinannya ke room Chief.
+
+Cara pakai singkat (tanpa install ulang APK):
+
+1. Jalankan server pendamping, lalu jalankan Runner di PC yang sama:
+   `python3 server/runner_service.py` (cek: `curl http://127.0.0.1:8791/health` harus `ok`).
+2. Di aplikasi, buka chat Chief, kirim `RUNNER: <tugas kamu>`, lalu tutup aplikasi.
+3. Buka lagi room itu nanti — balasannya sudah ada.
+
+Panduan lengkap (perintah, delegasi, troubleshooting, batasan):
+lihat [server/RUNNER-HOWTO.md](server/RUNNER-HOWTO.md). Desain dan
+bukti test ada di [RUNNER-DIRECTIONS.md](RUNNER-DIRECTIONS.md) dan
+[server/runner-mvp-test.md](server/runner-mvp-test.md).
+
 ### Tes
 
 ```bash
